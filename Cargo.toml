@@ -1,5 +1,5 @@
 [package]
-name = "hello-wasm"
+name = "wasm-starter"
 version = "0.1.0"
 authors = ["ShintaroOba <oba.shintaro@isid.co.jp>"]
 edition = "2018"
