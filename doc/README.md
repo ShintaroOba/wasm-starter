@@ -1,3 +1,6 @@
+<h1>Wasm Starter</h1>
+<h2>TOC</h2>
+
 - [wasmをビルドするツールについて](#wasmをビルドするツールについて)
   - [wasm-bindgen-cli](#wasm-bindgen-cli)
   - [wasm-pack](#wasm-pack)
