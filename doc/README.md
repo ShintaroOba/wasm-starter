@@ -1,4 +1,7 @@
-- [wasm-packコマンドについて](#wasm-packコマンドについて)
+- [wasmをビルドするツールについて](#wasmをビルドするツールについて)
+  - [wasm-bindgen-cli](#wasm-bindgen-cli)
+  - [wasm-pack](#wasm-pack)
+- [wasm-packコマンド](#wasm-packコマンド)
 - [wasmのコード生成](#wasmのコード生成)
   - [Cargo.toml](#cargotoml)
     - [1. crate-type](#1-crate-type)
@@ -8,8 +11,16 @@
 - [Denoで動かす](#denoで動かす)
   - [Install](#install)
 
+# wasmをビルドするツールについて
+## wasm-bindgen-cli
+wasm-bindgenで定義されたRustのコードからwasmモジュールとJsファイル、Tsの型定義ファイルを生成する。
 
-# wasm-packコマンドについて
+## wasm-pack
+上記に加え、npmモジュールとしてフロントエンドから呼び出すためのビルドツール
+
+
+
+# wasm-packコマンド
 - ``new``: wasm-packのテンプレートプロジェクト生成
     ```
     $ wasm-pack new wasm-starter
@@ -28,9 +39,58 @@
     │─ wasm_starter_bg.wasm
     │─ wasm_starter_bg.wasm.d.ts
     ```
-- ``pack``/ ``publish``: tarballを生成、npmレジストリへのpublish
-  - 割愛。[参考](https://rustwasm.github.io/docs/wasm-pack/commands/pack-and-publish.html)
-
+  - このとき、Cargo.tomlに`[package.metadata.wasm-pack.profile.release] wasm-opt = false`を追記することで上記の生成物に加えpackage.jsonも生成される。
+    ```json
+    {
+      "name": "wasm-starter",
+      "collaborators": [
+        "ShintaroOba <oba.shintaro@isid.co.jp>"
+      ],
+      "version": "0.1.0",
+      "files": [
+        "wasm_starter_bg.wasm",
+        "wasm_starter.js",
+        "wasm_starter_bg.js",
+        "wasm_starter.d.ts"
+      ],
+      "module": "wasm_starter.js",
+      "types": "wasm_starter.d.ts",
+      "sideEffects": false
+    }
+    ```
+- ``pack``: tarballを生成
+    ```bash
+    $ wasm-pack pack
+    npm notice 
+    npm notice 📦  wasm-starter@0.1.0
+    npm notice === Tarball Contents ===
+    npm notice 352B README.md
+    npm notice 326B package.json
+    npm notice 786B wasm_starter_bg.js
+    npm notice 435B wasm_starter_bg.wasm
+    npm notice 80B  wasm_starter.d.ts
+    npm notice 85B  wasm_starter.js
+    npm notice === Tarball Details ===
+    npm notice name:          wasm-starter
+    npm notice version:       0.1.0
+    npm notice filename:      wasm-starter-0.1.0.tgz
+    npm notice package size:  1.2 kB
+    npm notice unpacked size: 2.1 kB
+    npm notice shasum:        15c277ed3d34522b4423e58339301a45bbcad71b
+    npm notice integrity:     sha512-aOvu5HiwQ82c6[...]tugNqko6/uhMA==
+    npm notice total files:   6
+    npm notice
+    wasm-starter-0.1.0.tgz
+    [INFO]: 🎒  packed up your package!
+    ```
+- `publish`: npmレジストリへ生成したtarballをpublish
+  - 事前にLoginは必要
+    ```bash
+    $ wasm-pack login
+    npm notice Log in on https://registry.npmjs.org/
+    Username: shintaro
+    Password: ***
+    ```
 # wasmのコード生成
 `wasm-pack new wasm-starter`によって自動作成されたファイルの中身と、wasmビルドした際に生成されたコードの中身を確認する。
 
@@ -90,7 +150,7 @@ pub fn greet() {
 
 ## 1. wasm_bindgen
 wasm_bindgenはWebAssemblyエコシステムの一部であり、wasmモジュールとJavascript間をブリッジする役割を担う。
-`#[wasm_bindgen]`が付与された関数が外部に公開される。
+`#[wasm_bindgen]`が付与された関数が外部に公開される。wa
 
 
 # Bundlerなしで動かす
