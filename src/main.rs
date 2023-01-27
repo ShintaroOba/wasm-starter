@@ -1,5 +1,5 @@
 use wasm_starter::greet;
 
-fn main(){
+fn main() {
     greet();
 }
