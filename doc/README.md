@@ -1,4 +1,8 @@
-<h1>Wasm Starter</h1>
+<h1>wasm-packを使ったWasmプログラムの生成</h1>
+本資料では、wasm-packを使ってwasmプロジェクトを生成し、簡易的に動かすまでの手順と、中身のソースコードの解説（と一部考察）を記載する。
+
+---
+
 <h2>TOC</h2>
 
 - [wasmのビルドツール](#wasmのビルドツール)
@@ -12,7 +16,7 @@
     - [3. wee\_alloc](#3-wee_alloc)
   - [lib.rs](#librs)
     - [1. externと`#[wasm-bindgen]`](#1-externとwasm-bindgen)
-      - [#\[wasm-bindgen\]内では何が起こってるか](#wasm-bindgen内では何が起こってるか)
+    - [(参考) #\[wasm-bindgen\]内では何が起こってるか](#参考-wasm-bindgen内では何が起こってるか)
 - [Bundlerなしで動かす](#bundlerなしで動かす)
 - [Denoで動かす](#denoで動かす)
   - [Install](#install)
@@ -168,8 +172,8 @@ pub fn greet() {
 `extern`が付与されたalert関数は外部の関数を呼び出したい場合に付与する。
 `#[wasm_bindgen]`アトリビュートが付与されたことで、JavaScript内の関数を呼び出すことを示すことになる。
 
-#### #[wasm-bindgen]内では何が起こってるか
-むずすぎたので、一部推測を含む。該当箇所には【たぶん】マーク付与。
+### (参考) #[wasm-bindgen]内では何が起こってるか
+
 
 ```rs
 
@@ -192,8 +196,39 @@ pub fn wasm_bindgen(attr: TokenStream, input: TokenStream) -> TokenStream {
 - ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、最終的にトークンを返却している
 
 ```rs
+/// Takes the parsed input from a `#[wasm_bindgen]` macro and returns the generated bindings
+pub fn expand(attr: TokenStream, input: TokenStream) -> Result<TokenStream, Diagnostic> {
+    parser::reset_attrs_used();
+    let item = syn::parse2::<syn::Item>(input)?;
+    let opts = syn::parse2(attr)?;
 
+    let mut tokens = proc_macro2::TokenStream::new();
+    let mut program = backend::ast::Program::default();
+    item.macro_parse(&mut program, (Some(opts), &mut tokens))?;
+    program.try_to_tokens(&mut tokens)?;
+
+    // If we successfully got here then we should have used up all attributes
+    // and considered all of them to see if they were used. If one was forgotten
+    // that's a bug on our end, so sanity check here.
+    parser::check_unused_attrs(&mut tokens);
+    
+
+    Ok(tokens)
+}
 ```
+
+- メソッド名とコメント見ると`#[wasm-bindgen]`マクロが付与されたRust関数を展開して、最終的に何らかの生成されたコードを返しているっぽい
+- `backend::ast::Program`にはRustの抽象構文木が表現されたコードが含まれていて、wasmにバインドする関数を生成する際に必要なメタデータが含まれている。
+- 結果よくわからないが、wasmモジュールを生成するためのアトリビュートっぽい
+
+
+
+
+
+
+
+
+
 
 
 # Bundlerなしで動かす
