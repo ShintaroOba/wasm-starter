@@ -1,25 +1,28 @@
 <h1>Wasm Starter</h1>
 <h2>TOC</h2>
 
-- [wasmをビルドするツールについて](#wasmをビルドするツールについて)
+- [wasmのビルドツール](#wasmのビルドツール)
   - [wasm-bindgen-cli](#wasm-bindgen-cli)
   - [wasm-pack](#wasm-pack)
 - [wasm-packコマンド](#wasm-packコマンド)
 - [wasmのコード生成](#wasmのコード生成)
   - [Cargo.toml](#cargotoml)
     - [1. crate-type](#1-crate-type)
+    - [2. wasm-bindgen](#2-wasm-bindgen)
+    - [3. wee\_alloc](#3-wee_alloc)
   - [lib.rs](#librs)
-  - [1. wasm\_bindgen](#1-wasm_bindgen)
+    - [1. externと`#[wasm-bindgen]`](#1-externとwasm-bindgen)
+      - [#\[wasm-bindgen\]内では何が起こってるか](#wasm-bindgen内では何が起こってるか)
 - [Bundlerなしで動かす](#bundlerなしで動かす)
 - [Denoで動かす](#denoで動かす)
   - [Install](#install)
 
-# wasmをビルドするツールについて
+# wasmのビルドツール
 ## wasm-bindgen-cli
 wasm-bindgenで定義されたRustのコードからwasmモジュールとJsファイル、Tsの型定義ファイルを生成する。
 
 ## wasm-pack
-上記に加え、npmモジュールとしてフロントエンドから呼び出すためのビルドツール
+上記に加え、npmモジュールとしてフロントエンドから呼び出すためのビルドツール。今回はこちらを利用してwasmを動かしてみる。
 
 
 
@@ -107,10 +110,10 @@ crate-type = ["cdylib", "rlib"]   # ---※1
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = "0.2.63"
+wasm-bindgen = "0.2.63"　　# ---※2
 console_error_panic_hook = { version = "0.1.6", optional = true }
 
-wee_alloc = { version = "0.4.5", optional = true }
+wee_alloc = { version = "0.4.5", optional = true } # ---※3
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
@@ -121,11 +124,21 @@ opt-level = "s"
 
 ```
 ### 1. crate-type
-Rustコンパイラがクレートをどのように（静的/動的）リンクするかを定義するもの。（詳細は[Linkage](https://doc.rust-lang.org/reference/linkage.html)を参照）
+Rustコンパイラがクレートをどのように（静的/動的）リンクするかを定義するもの。クレートがライブラリ、バイナリのどちらにコンパイルされるべきかをコンパイラに伝えている。（詳細は[Linkage](https://doc.rust-lang.org/reference/linkage.html)を参照）
 
 
-- `cdylib`というのは動的ライブラリの意。ビルド時に多言語から動的にロードされる事を指す。
-- `rlib`は`"R"ust "Lib"rary`の略。静的なRustライブラリであることを指しており、中間生成物として使用される。
+- `cdylib`というのは動的ライブラリの意。ビルド時に多言語から動的にロードされるために使用される。Wasmの場合だと、メインエントリ関数がないということを示す。
+- `rlib`は`"R"ust "Lib"rary`の略。ビルドの中間生成物であり、静的なRustライブラリであることを指す。
+
+### 2. wasm-bindgen
+JavaScriptとRust間をつなぐインターフェースとなるコードを生成することができるライブラリ
+今回は、RustのコードからJavaScriptのAPIを呼びだすが、JavaScriptからRustビルトインのAPIを呼び出すことも可能。
+[crate.io](https://crates.io/crates/wasm-bindgen)
+
+### 3. wee_alloc
+`wee`というのは`Wasm-Enabled Elfin Allocator`の略。wasm用の軽量なメモリアロケータとしてこれを利用することでビルドして生成された.wasmファイルのサイズを小さくすることができる。
+
+[crate.io](https://crates.io/crates/wee_alloc)
 
 ## lib.rs
 ```rs
@@ -139,9 +152,9 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen]   # ------※1
+#[wasm_bindgen]   
 extern {
-    fn alert(s: &str);
+    fn alert(s: &str);    # ------※1
 }
 
 #[wasm_bindgen]
@@ -151,9 +164,36 @@ pub fn greet() {
 
 ```
 
-## 1. wasm_bindgen
-wasm_bindgenはWebAssemblyエコシステムの一部であり、wasmモジュールとJavascript間をブリッジする役割を担う。
-`#[wasm_bindgen]`が付与された関数が外部に公開される。wa
+### 1. externと`#[wasm-bindgen]`
+`extern`が付与されたalert関数は外部の関数を呼び出したい場合に付与する。
+`#[wasm_bindgen]`アトリビュートが付与されたことで、JavaScript内の関数を呼び出すことを示すことになる。
+
+#### #[wasm-bindgen]内では何が起こってるか
+むずすぎたので、一部推測を含む。該当箇所には【たぶん】マーク付与。
+
+```rs
+
+#[proc_macro_attribute]
+pub fn wasm_bindgen(attr: TokenStream, input: TokenStream) -> TokenStream {
+    match wasm_bindgen_macro_support::expand(attr.into(), input.into()) {
+        Ok(tokens) => {
+            if cfg!(feature = "xxx_debug_only_print_generated_code") {
+                println!("{}", tokens);
+            }
+            tokens.into()
+        }
+        Err(diagnostic) => (quote! { #diagnostic }).into(),
+    }
+}
+
+```
+- `#[proc_macro_attribute]`は`#[wasm-bindgen]`が手続き型マクロであることを示す
+- `attr`は`#[wasm-bindgen()]`に渡す引数、`input`はアトリビュートがついた関数全体のトークン（関数のコードそのものをTokenStreamという形式になったもの）
+- ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、最終的にトークンを返却している
+
+```rs
+
+```
 
 
 # Bundlerなしで動かす
