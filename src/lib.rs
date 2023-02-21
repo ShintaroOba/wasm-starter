@@ -8,11 +8,14 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+// JavaScript側のモジュールをコール
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
 }
 
+
+// JavaScript側で呼び出すRustの関数
 #[wasm_bindgen]
 pub fn greet() {
     alert("Hello, hello-wasm!");

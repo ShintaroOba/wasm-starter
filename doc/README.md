@@ -9,14 +9,23 @@
   - [wasm-bindgen-cli](#wasm-bindgen-cli)
   - [wasm-pack](#wasm-pack)
 - [wasm-packコマンド](#wasm-packコマンド)
-- [wasmのコード生成](#wasmのコード生成)
+- [テンプレートプロジェクトのソース](#テンプレートプロジェクトのソース)
   - [Cargo.toml](#cargotoml)
     - [1. crate-type](#1-crate-type)
     - [2. wasm-bindgen](#2-wasm-bindgen)
     - [3. wee\_alloc](#3-wee_alloc)
   - [lib.rs](#librs)
     - [1. externと`#[wasm-bindgen]`](#1-externとwasm-bindgen)
-    - [(参考) #\[wasm-bindgen\]内では何が起こってるか](#参考-wasm-bindgen内では何が起こってるか)
+    - [(参考) #\[wasm-bindgen\]内では何が起こってるかを簡単に](#参考-wasm-bindgen内では何が起こってるかを簡単に)
+    - [greet関数の呼ばれ方](#greet関数の呼ばれ方)
+      - [package.json](#packagejson)
+      - [index.js](#indexjs)
+- [wasm-pack buildによって生成されたコード](#wasm-pack-buildによって生成されたコード)
+  - [wasm\_starter\_bg.js](#wasm_starter_bgjs)
+  - [wasm\_starter\_bg.wasm](#wasm_starter_bgwasm)
+  - [wasm\_starter\_bg.wasm.d.ts](#wasm_starter_bgwasmdts)
+  - [wasm\_starter.d.ts](#wasm_starterdts)
+  - [wasm\_starter.js](#wasm_starterjs)
 - [Bundlerなしで動かす](#bundlerなしで動かす)
 - [Denoで動かす](#denoで動かす)
   - [Install](#install)
@@ -101,7 +110,7 @@ wasm-bindgenで定義されたRustのコードからwasmモジュールとJsフ�
     Username: shintaro
     Password: ***
     ```
-# wasmのコード生成
+# テンプレートプロジェクトのソース
 `wasm-pack new wasm-starter`によって自動作成されたファイルの中身と、wasmビルドした際に生成されたコードの中身を確認する。
 
 ## Cargo.toml
@@ -156,11 +165,13 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+// JavaScript側のモジュールをコール
 #[wasm_bindgen]   
 extern {
     fn alert(s: &str);    # ------※1
 }
 
+// JavaScript側で呼び出すRustの関数
 #[wasm_bindgen]
 pub fn greet() {
     alert("Hello, hello-wasm!");
@@ -170,11 +181,11 @@ pub fn greet() {
 
 ### 1. externと`#[wasm-bindgen]`
 `extern`が付与されたalert関数は外部の関数を呼び出したい場合に付与する。
-`#[wasm_bindgen]`アトリビュートが付与されたことで、JavaScript内の関数を呼び出すことを示すことになる。
+`#[wasm_bindgen]`アトリビュートが付与されたことで、wasm-bindgenによって生成されたJavaScriptの関数を呼び出すことを示す。
+`extern`が付いていない`greet()`はJavaScript側でこの関数を呼び出すことを表している。
 
-### (参考) #[wasm-bindgen]内では何が起こってるか
 
-
+### (参考) #[wasm-bindgen]内では何が起こってるかを簡単に
 ```rs
 
 #[proc_macro_attribute]
@@ -193,38 +204,45 @@ pub fn wasm_bindgen(attr: TokenStream, input: TokenStream) -> TokenStream {
 ```
 - `#[proc_macro_attribute]`は`#[wasm-bindgen]`が手続き型マクロであることを示す
 - `attr`は`#[wasm-bindgen()]`に渡す引数、`input`はアトリビュートがついた関数全体のトークン（関数のコードそのものをTokenStreamという形式になったもの）
-- ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、最終的にトークンを返却している
+- ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、`input`に渡されたRustのコードを展開し、そこから生成したJsコードを返却している
 
-```rs
-/// Takes the parsed input from a `#[wasm_bindgen]` macro and returns the generated bindings
-pub fn expand(attr: TokenStream, input: TokenStream) -> Result<TokenStream, Diagnostic> {
-    parser::reset_attrs_used();
-    let item = syn::parse2::<syn::Item>(input)?;
-    let opts = syn::parse2(attr)?;
+### greet関数の呼ばれ方
+JavaScript側ではgreet関数を下記のようにして呼ぶことができる。
 
-    let mut tokens = proc_macro2::TokenStream::new();
-    let mut program = backend::ast::Program::default();
-    item.macro_parse(&mut program, (Some(opts), &mut tokens))?;
-    program.try_to_tokens(&mut tokens)?;
+#### package.json
+````json
+  ~~
+ "devDependencies": {
+    "wasm-starter": "^0.1.0",
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.5",
+    "copy-webpack-plugin": "^5.0.0"
+  }
+````
 
-    // If we successfully got here then we should have used up all attributes
-    // and considered all of them to see if they were used. If one was forgotten
-    // that's a bug on our end, so sanity check here.
-    parser::check_unused_attrs(&mut tokens);
-    
+#### index.js
+````js
+// wasmモジュールをnpmモジュールとしてImportする
+import * as wasm from 'wasm-starter';
 
-    Ok(tokens)
-}
-```
+wasm.greet();
 
-- メソッド名とコメント見ると`#[wasm-bindgen]`マクロが付与されたRust関数を展開して、最終的に何らかの生成されたコードを返しているっぽい
-- `backend::ast::Program`にはRustの抽象構文木が表現されたコードが含まれていて、wasmにバインドする関数を生成する際に必要なメタデータが含まれている。
-- 結果よくわからないが、wasmモジュールを生成するためのアトリビュートっぽい
+````
 
 
 
 
 
+
+# wasm-pack buildによって生成されたコード
+
+## wasm_starter_bg.js
+
+## wasm_starter_bg.wasm
+## wasm_starter_bg.wasm.d.ts
+## wasm_starter.d.ts
+## wasm_starter.js
 
 
 
