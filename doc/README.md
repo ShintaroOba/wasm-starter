@@ -204,7 +204,9 @@ pub fn wasm_bindgen(attr: TokenStream, input: TokenStream) -> TokenStream {
 ```
 - `#[proc_macro_attribute]`は`#[wasm-bindgen]`が手続き型マクロであることを示す
 - `attr`は`#[wasm-bindgen()]`に渡す引数、`input`はアトリビュートがついた関数全体のトークン（関数のコードそのものをTokenStreamという形式になったもの）
-- ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、`input`に渡されたRustのコードを展開し、そこから生成したJsコードを返却している
+- ``wasm_bindgen_macro_support::expand()``関数の評価をmatch式で行い、`input`に渡されたRustのコードを展開し、そこから生成したコードを返却している
+  - JavaScript→Rust呼び出しの場合は、インターフェースとなるJsコードを生成。Jsコードがwasmを呼び出すことでRustの関数が呼び出される
+  - Rust→JavaSCript呼び出しの場合は、生成されたJsコードはJsの関数にマッピングされる
 
 ### greet関数の呼ばれ方
 JavaScript側ではgreet関数を下記のようにして呼ぶことができる。
