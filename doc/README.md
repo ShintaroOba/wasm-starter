@@ -8,6 +8,7 @@
 - [wasmのビルドツール](#wasmのビルドツール)
   - [wasm-bindgen-cli](#wasm-bindgen-cli)
   - [wasm-pack](#wasm-pack)
+  - [Trunk](#trunk)
 - [wasm-packコマンド](#wasm-packコマンド)
 - [テンプレートプロジェクトのソース](#テンプレートプロジェクトのソース)
   - [Cargo.toml](#cargotoml)
@@ -21,22 +22,26 @@
       - [package.json](#packagejson)
       - [index.js](#indexjs)
 - [wasm-pack buildによって生成されたコード](#wasm-pack-buildによって生成されたコード)
-  - [wasm\_starter\_bg.js](#wasm_starter_bgjs)
-  - [wasm\_starter\_bg.wasm](#wasm_starter_bgwasm)
-  - [wasm\_starter\_bg.wasm.d.ts](#wasm_starter_bgwasmdts)
-  - [wasm\_starter.d.ts](#wasm_starterdts)
-  - [wasm\_starter.js](#wasm_starterjs)
-- [Bundlerなしで動かす](#bundlerなしで動かす)
-- [Denoで動かす](#denoで動かす)
-  - [Install](#install)
+- [wasmを動かす](#wasmを動かす)
+  - [npm initテンプレートを使う](#npm-initテンプレートを使う)
 
 # wasmのビルドツール
+ビルドツールはざっくり以下に分類される。wasm-packはwasm-bindgen-cliのラッパーなのでほぼ同じ。
+wasm-packとTrunkでは生成されるモジュールや機能に違いがある。
+
 ## wasm-bindgen-cli
 wasm-bindgenで定義されたRustのコードからwasmモジュールとJsファイル、Tsの型定義ファイルを生成する。
 
 ## wasm-pack
-上記に加え、npmモジュールとしてフロントエンドから呼び出すためのビルドツール。今回はこちらを利用してwasmを動かしてみる。
+上記に加え、npmモジュールとしてフロントエンドから呼び出すためのビルドツール。これが主流。  
+今回はこちらを利用してwasmを動かしてみる。
 
+## Trunk
+wasm-packに対し、Trunkはwasmとjs、それらを呼び出すHTMLを生成。
+また、開発用サーバも内包しており、フロントエンド実装を用意せずとも手軽にwasmを動かすことができる。
+
+以下はwasmで作成したmarkdownエディタでTrunkを使って開発用サ―バを立てた時の例
+https://user-images.githubusercontent.com/57422625/234603431-8af80347-f150-4a35-a45e-e6d483c30bbc.gif
 
 
 # wasm-packコマンド
@@ -233,37 +238,29 @@ wasm.greet();
 ````
 
 
-
-
-
-
 # wasm-pack buildによって生成されたコード
 
-## wasm_starter_bg.js
-
-## wasm_starter_bg.wasm
-## wasm_starter_bg.wasm.d.ts
-## wasm_starter.d.ts
-## wasm_starter.js
-
-
-
-
+- wasm_starter_bg.wasm
+  - wasmモジュールそのもの
+- wasm_starter_bg.js
+  - Rustで実装した関数をラップしたjsの関数を生成する
+- wasm_starter.js
+  - wasmモジュールをインポートして初期化
+- wasm_starter_bg.wasm.d.ts
+- wasm_starter.d.ts
 
 
-# Bundlerなしで動かす
-https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html
 
-# Denoで動かす
-Wasmランタイムは複数あるが、Denoを使ってWasmモジュールを動かしてみる。
+# wasmを動かす
+## npm initテンプレートを使う
+wasmを呼び出すフロントエンド側のテンプレート実装を提供。
+参考：https://rustwasm.github.io/wasm-pack/book/tutorials/hybrid-applications-with-webpack/getting-started.html#getting-started
 
-## Install 
-```bash
-$ choco install deno
-```
+````bash
+$ npm init rust-webpack sample
+````
 
-```bash
-$ deno -V
-deno 1.30.0
-```
+````bash
+$ npm start
+````
 
