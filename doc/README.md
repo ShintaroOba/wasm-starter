@@ -40,7 +40,7 @@ wasm-packに対し、Trunkはwasmとjs、それらを呼び出すHTMLを生成�
 
 以下はwasmで作成したmarkdownエディタでTrunkを使って開発用サ―バを立てた時の例
 
-https://user-images.githubusercontent.com/57422625/234603431-8af80347-f150-4a35-a45e-e6d483c30bbc.gif
+![](https://user-images.githubusercontent.com/57422625/234603431-8af80347-f150-4a35-a45e-e6d483c30bbc.gif)
 
 
 # wasm-packコマンド
