@@ -8,7 +8,8 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// JavaScript側のモジュールをコール
+// JavaScriptのwindow.alertモジュールをコール
+// #[wasm_bindgen(module = "./hoge")]等でモジュールは指定もできる
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
